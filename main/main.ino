@@ -18,6 +18,7 @@
 char current_location[] = "A0000";  //目前位置
 char target_location[] = "A0000";   //目標位置
 char RFID_code[] = "A0000";         //最近的RFID卡號
+uint8_t pub_battery = 0;            //電池電量
 
 void setup() {
     // put your setup code here, to run once:
@@ -27,12 +28,20 @@ void setup() {
 
 void loop() {
 
-    char cmd[] = "QQQJ0020XXX";         //讀取指令
+    char cmd[] = "QQQD0060XXX";         //讀取指令
     char card_number[] = "0000";       //讀取卡號
     char report[] = "QQQ00000XXX";      //回報指令
 
-    if( cmd[3] == 'D' ) DCmd( cmd );
-    else if( cmd[3] == 'Z' ) ZCmd( cmd );
+    if( cmd[3] == 'D' ){
+
+        uint8_t battery = 0;
+        DCmd( cmd, report );
+
+        battery = (report[5]-'0')*100+(report[6]-'0')*10+report[7]-'0';
+        Serial.print( "battery= " );
+        Serial.println( battery );
+        
+    }else if( cmd[3] == 'Z' ) ZCmd( cmd );
     else if( cmd[3] == 'P' ) PCmd( cmd );
     else if( cmd[3] == 'A' ) for( int i=4 ; i<=7 ; i++ )card_number[i-4] = cmd[i];
     else if( cmd[3] == 'B' ) BCmd( cmd, report, card_number );
@@ -87,9 +96,7 @@ void CCmd( char* cmd, char* report, char* card ){
  *  指令D
  */
 
-void DCmd( char* cmd ){ // 
-
-    String battery_report = "QQQL0000XXX";
+void DCmd( char* cmd, char* battery_report ){ // 
 
     if( cmd[5] == '0' ){
 
@@ -106,7 +113,6 @@ void DCmd( char* cmd ){ //
             battery_report[6] = (battery/10)%10+'0';
             battery_report[5] = (battery/100)%10+'0';
 
-            Serial.println( "battery="+battery_report );
         }
         else return;
         
@@ -149,7 +155,7 @@ uint8_t D_direction( uint8_t cmd ){
 uint8_t D_battery(){
     
     // 電量百分比
-    uint8_t battery = 0;
+    uint8_t battery = 60;
     Serial.println( "in battery ");
 
     // battery = 電量
